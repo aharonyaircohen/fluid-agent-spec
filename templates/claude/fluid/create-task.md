@@ -9,7 +9,7 @@ You must:
 * Classify the task into one of the allowed **task types**.
 * Select which specification documents are relevant.
 * Generate a complete task file in YAML.
-* Provide the intended file path under `tasks/[task-type]/...`.
+* Provide the intended file path under `.fluidspec/tasks/[task-type]/...`.
 
 You do **not** execute the task. You only define it precisely.
 
@@ -20,10 +20,10 @@ You do **not** execute the task. You only define it precisely.
 * All reference material lives under the user's project root at `.fluidspec/spec/`.
   * Core specs: `.fluidspec/spec/base/README.md`, `.fluidspec/spec/base/constraints.md`, `.fluidspec/spec/base/conventions.md`.
   * Project templates/specs: `.fluidspec/spec/project/*.md` (locally owned; do not overwrite).
-* Tasks will be stored under:
+* Tasks will be stored under `.fluidspec/tasks/`:
 
 ```text
-/tasks/
+/.fluidspec/tasks/
   feature/<NNN-YYYYMMDD>/<feature-slug>.yaml
   bugfix/<NNN-YYYYMMDD>/<bugfix-slug>.yaml
   refactor/<NNN-YYYYMMDD>/<refactor-slug>.yaml
@@ -159,7 +159,7 @@ risk_level: low | medium | high
 notes: >
   Any extra hints, edge cases, or warnings.
 
-file_path: "tasks/feature/001-20251125/short-title-slug.yaml"
+file_path: ".fluidspec/tasks/feature/001-20251125/short-title-slug.yaml"
 ```
 
 Rules:
@@ -167,8 +167,8 @@ Rules:
 * `task_id` MUST be unique; use a predictable pattern like `T-YYYYMMDD-001` if needed.
 * `file_path` MUST:
 
-  * start with `tasks/`
-  * include the task type folder, e.g. `tasks/feature/`
+  * start with `.fluidspec/tasks/`
+  * include the task type folder, e.g. `.fluidspec/tasks/feature/`
   * include a dated subfolder with zero-padded sequence and date: `NNN-YYYYMMDD` (e.g., `001-20251125`)
   * filename is the task slug, e.g., `login-button-toggle.yaml`
 * Keep `requires_operator_approval` set to `true` so the Task Manager enters the approval loop; it will drive `status` through `in_progress` -> `awaiting_approval` -> `completed`/`rejected` and manage `iteration` and `operator_feedback` each time the operator requests changes.
@@ -194,7 +194,7 @@ Example structure (not content):
 ````text
 Summary:
 - type: feature
-- file_path: tasks/feature/001-20251125/some-feature.yaml
+- file_path: .fluidspec/tasks/feature/001-20251125/some-feature.yaml
 - selected specs:
   - .fluidspec/spec/base/constraints.md
   - .fluidspec/spec/base/conventions.md
