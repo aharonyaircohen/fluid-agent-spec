@@ -2,18 +2,42 @@
   "commands": [
     {
       "name": "Fluid Make Task",
-      "id": "make-task",
+      "id": "create-task",
       "version": "1.0.0",
       "description": "Create FluidSpec tasks.",
-      "entry": "make-task.md",
+      "entry": "create-task.md",
       "input_type": "text"
     },
     {
       "name": "Fluid Run Task",
-      "id": "run-task",
+      "id": "execute-task",
       "version": "1.0.0",
       "description": "Execute FluidSpec tasks.",
-      "entry": "run-task.md",
+      "entry": "execute-task.md",
+      "input_type": "text"
+    },
+    {
+      "name": "Fluid Create Branch",
+      "id": "create-branch",
+      "version": "1.0.0",
+      "description": "Create a new Git branch for the current work.",
+      "entry": "create-branch.md",
+      "input_type": "text"
+    },
+    {
+      "name": "Fluid Commit",
+      "id": "commit",
+      "version": "1.0.0",
+      "description": "Create a Git commit with the staged changes.",
+      "entry": "commit.md",
+      "input_type": "text"
+    },
+    {
+      "name": "Fluid Create PR",
+      "id": "create-pr",
+      "version": "1.0.0",
+      "description": "Open a pull request for the current branch.",
+      "entry": "create-pr.md",
       "input_type": "text"
     }
   ]

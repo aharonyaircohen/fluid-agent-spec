@@ -9,6 +9,7 @@ console.log('Running FluidSpec Package Tests...\n');
 const rootDir = path.join(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
 const cliPath = path.join(distDir, 'cli.cjs');
+const claudeTemplatesDir = path.join(rootDir, 'templates', 'claude');
 
 let exitCode = 0;
 
@@ -61,37 +62,64 @@ test('Required dist files exist', () => {
 
 // Test 4: Template directories exist
 test('Template directories exist', () => {
-  const templatesDir = path.join(rootDir, 'templates', 'claude');
-  const expectedTemplates = ['fluid-task-engineer', 'fluid-dev-agent', 'fluid-task-manager'];
+  if (!fs.existsSync(claudeTemplatesDir)) {
+    throw new Error('templates/claude directory not found');
+  }
 
-  for (const template of expectedTemplates) {
-    const templateDir = path.join(templatesDir, template);
-    if (!fs.existsSync(templateDir)) {
-      throw new Error(`Template directory missing: ${template}`);
-    }
+  const templateDirs = fs.readdirSync(claudeTemplatesDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name);
 
-    const commandJson = path.join(templateDir, 'command.json');
-    const promptMd = path.join(templateDir, 'prompt.md');
+  if (templateDirs.length === 0) {
+    throw new Error('No template directories found in templates/claude');
+  }
 
-    if (!fs.existsSync(commandJson)) {
+  for (const template of templateDirs) {
+    const templateDir = path.join(claudeTemplatesDir, template);
+    const commandJsonPath = path.join(templateDir, 'command.json');
+
+    if (!fs.existsSync(commandJsonPath)) {
       throw new Error(`command.json missing in ${template}`);
     }
-    if (!fs.existsSync(promptMd)) {
-      throw new Error(`prompt.md missing in ${template}`);
+    const commandJson = JSON.parse(fs.readFileSync(commandJsonPath, 'utf8'));
+
+    if (Array.isArray(commandJson.commands)) {
+      for (const cmd of commandJson.commands) {
+        const entryPath = path.join(templateDir, cmd.entry);
+        if (!fs.existsSync(entryPath)) {
+          throw new Error(`${cmd.entry} missing in ${template}`);
+        }
+      }
+    } else {
+      const promptMd = path.join(templateDir, 'prompt.md');
+      if (!fs.existsSync(promptMd)) {
+        throw new Error(`prompt.md missing in ${template}`);
+      }
     }
   }
 });
 
 // Test 5: Spec templates exist
 test('Spec templates exist', () => {
-  const specTemplatesDir = path.join(rootDir, 'templates', 'spec');
-  if (!fs.existsSync(specTemplatesDir)) {
-    throw new Error('templates/spec directory not found');
+  const specBaseDir = path.join(rootDir, 'templates', 'spec', 'base');
+  const specProjectDir = path.join(rootDir, 'templates', 'spec', 'project');
+
+  if (!fs.existsSync(specBaseDir)) {
+    throw new Error('templates/spec/base directory not found');
   }
 
-  const specFiles = fs.readdirSync(specTemplatesDir).filter(f => f.endsWith('.md'));
+  const specFiles = fs.readdirSync(specBaseDir).filter(f => f.endsWith('.md'));
   if (specFiles.length === 0) {
-    throw new Error('No .md files found in templates/spec');
+    throw new Error('No .md files found in templates/spec/base');
+  }
+
+  if (!fs.existsSync(specProjectDir)) {
+    throw new Error('templates/spec/project directory not found');
+  }
+
+  const projectTemplates = fs.readdirSync(specProjectDir).filter(f => f.endsWith('.template.md'));
+  if (projectTemplates.length === 0) {
+    throw new Error('No .template.md files found in templates/spec/project');
   }
 });
 
@@ -108,8 +136,17 @@ test('CLI help command works', () => {
 test('CLI list command works', () => {
   try {
     const output = execSync(`node "${cliPath}" list`, { encoding: 'utf8' });
-    if (!output.includes('fluid-task-engineer')) {
-      throw new Error('List command output does not include expected templates');
+    if (!output.includes('Available Claude command templates')) {
+      throw new Error('List command output missing header');
+    }
+
+    const templateDirs = fs.readdirSync(claudeTemplatesDir, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name);
+
+    const hasKnownTemplate = templateDirs.some(template => output.includes(template));
+    if (!hasKnownTemplate) {
+      throw new Error('List command output does not include expected template ids');
     }
   } catch (error) {
     throw new Error('CLI list command failed');
@@ -149,34 +186,42 @@ test('CLI claude:init creates command structure', () => {
     }
 
     // Verify each command template was copied
-    const templates = ['fluid-task-engineer', 'fluid-dev-agent', 'fluid-task-manager'];
-    for (const template of templates) {
-      const templateDir = path.join(commandsDir, template);
-      if (!fs.existsSync(templateDir)) {
-        throw new Error(`Template ${template} was not copied`);
-      }
+    const templateDirs = fs.readdirSync(claudeTemplatesDir, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name);
 
-      const commandJson = path.join(templateDir, 'command.json');
-      const promptMd = path.join(templateDir, 'prompt.md');
+    for (const template of templateDirs) {
+      const templateDir = path.join(claudeTemplatesDir, template);
+      const commandJsonPath = path.join(templateDir, 'command.json');
+      const commandJson = JSON.parse(fs.readFileSync(commandJsonPath, 'utf8'));
 
-      if (!fs.existsSync(commandJson) || !fs.existsSync(promptMd)) {
-        throw new Error(`Template ${template} is incomplete`);
-      }
-    }
+      if (Array.isArray(commandJson.commands)) {
+        for (const cmd of commandJson.commands) {
+          const cmdDirName = `${template}-${cmd.id}`;
+          const cmdDirPath = path.join(commandsDir, cmdDirName);
+          if (!fs.existsSync(cmdDirPath)) {
+            throw new Error(`Template ${cmdDirName} was not copied`);
+          }
 
-    // Verify multi-command templates were split correctly
-    const multiCommands = ['fluid-make-task', 'fluid-run-task'];
-    for (const cmd of multiCommands) {
-      const cmdDir = path.join(commandsDir, cmd);
-      if (!fs.existsSync(cmdDir)) {
-        throw new Error(`Multi-command ${cmd} was not created`);
-      }
+          const commandJsonCopied = path.join(cmdDirPath, 'command.json');
+          const promptMdCopied = path.join(cmdDirPath, 'prompt.md');
 
-      const commandJson = path.join(cmdDir, 'command.json');
-      const promptMd = path.join(cmdDir, 'prompt.md');
+          if (!fs.existsSync(commandJsonCopied) || !fs.existsSync(promptMdCopied)) {
+            throw new Error(`Template ${cmdDirName} is incomplete`);
+          }
+        }
+      } else {
+        const templateDirPath = path.join(commandsDir, template);
+        if (!fs.existsSync(templateDirPath)) {
+          throw new Error(`Template ${template} was not copied`);
+        }
 
-      if (!fs.existsSync(commandJson) || !fs.existsSync(promptMd)) {
-        throw new Error(`Multi-command ${cmd} is incomplete`);
+        const commandJsonCopied = path.join(templateDirPath, 'command.json');
+        const promptMdCopied = path.join(templateDirPath, 'prompt.md');
+
+        if (!fs.existsSync(commandJsonCopied) || !fs.existsSync(promptMdCopied)) {
+          throw new Error(`Template ${template} is incomplete`);
+        }
       }
     }
 
@@ -186,10 +231,30 @@ test('CLI claude:init creates command structure', () => {
       throw new Error('.fluidspec directory was not created');
     }
 
-    // Verify spec files were copied
-    const specFiles = fs.readdirSync(fluidspecDir).filter(f => f.endsWith('.md'));
-    if (specFiles.length === 0) {
-      throw new Error('No spec files were copied to .fluidspec');
+    const specDir = path.join(fluidspecDir, 'spec');
+    if (!fs.existsSync(specDir)) {
+      throw new Error('.fluidspec/spec directory was not created');
+    }
+
+    const baseDir = path.join(specDir, 'base');
+    if (!fs.existsSync(baseDir)) {
+      throw new Error('.fluidspec/spec/base directory was not created');
+    }
+    const baseFiles = fs.readdirSync(baseDir).filter(f => f.endsWith('.md'));
+    if (baseFiles.length === 0) {
+      throw new Error('No base spec files were copied to .fluidspec/spec/base');
+    }
+
+    const projectDir = path.join(specDir, 'project');
+    if (!fs.existsSync(projectDir)) {
+      throw new Error('.fluidspec/spec/project directory was not created');
+    }
+    const projectFiles = fs.readdirSync(projectDir).filter(f => f.endsWith('.md'));
+    if (projectFiles.length === 0) {
+      throw new Error('No project spec files were copied to .fluidspec/spec/project');
+    }
+    if (!projectFiles.includes('task-template.md')) {
+      throw new Error('Project templates were not renamed to .md files');
     }
 
     // Cleanup

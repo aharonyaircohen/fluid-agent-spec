@@ -1,10 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { copyDir, ensureDir, pathExists } from '../utils/fsUtils';
+import { copyDir, copyFile, ensureDir, pathExists } from '../utils/fsUtils';
 
 export interface ClaudeInitOptions {
   projectRoot: string;
   force: boolean;
+}
+
+export interface InitSpecFilesOptions {
+  force?: boolean;
 }
 
 /**
@@ -120,40 +124,74 @@ export function claudeInit(options: ClaudeInitOptions): void {
     console.log(`  - /${cmd}`);
   });
 
-  // Copy FluidSpec markdown files to .fluidspec directory
-  const specTemplatesDir = path.join(packageRoot, 'templates', 'spec');
-  const fluidspecTargetDir = path.join(projectRoot, '.fluidspec');
-
-  if (pathExists(specTemplatesDir)) {
-    console.log(`\nCopying FluidSpec documentation to: ${fluidspecTargetDir}`);
-    ensureDir(fluidspecTargetDir);
-
-    // Get all .md files from templates/spec
-    const specFiles = fs.readdirSync(specTemplatesDir)
-      .filter(file => file.endsWith('.md'));
-
-    let specCopied = 0;
-    let specSkipped = 0;
-
-    for (const file of specFiles) {
-      const sourcePath = path.join(specTemplatesDir, file);
-      const targetPath = path.join(fluidspecTargetDir, file);
-
-      if (force || !fs.existsSync(targetPath)) {
-        fs.copyFileSync(sourcePath, targetPath);
-        specCopied++;
-      } else {
-        specSkipped++;
-      }
-    }
-
-    console.log(`  Copied: ${specCopied} spec file(s)`);
-    if (specSkipped > 0) {
-      console.log(`  Skipped: ${specSkipped} spec file(s) (already exist)`);
-    }
-  }
+  initSpecFiles(projectRoot, { force });
 
   console.log('\nYou can now use these commands in Claude!');
+}
+
+export function initSpecFiles(
+  projectRoot: string,
+  options: InitSpecFilesOptions = {}
+): void {
+  const { force = false } = options;
+  const packageRoot = findPackageRoot();
+  const specTemplatesRoot = path.join(packageRoot, 'templates', 'spec');
+
+  if (!pathExists(specTemplatesRoot)) {
+    console.warn(`Spec templates directory not found at ${specTemplatesRoot}`);
+    return;
+  }
+
+  const targetSpecRoot = path.join(projectRoot, '.fluidspec', 'spec');
+  const baseSourceDir = path.join(specTemplatesRoot, 'base');
+  const projectTemplateDir = path.join(specTemplatesRoot, 'project');
+  const baseTargetDir = path.join(targetSpecRoot, 'base');
+  const projectTargetDir = path.join(targetSpecRoot, 'project');
+
+  ensureDir(targetSpecRoot);
+
+  if (pathExists(baseSourceDir)) {
+    console.log(`\nCopying FluidSpec base files to: ${baseTargetDir}`);
+    const { copied } = copyDir(baseSourceDir, baseTargetDir, true);
+    console.log(`  Base files copied: ${copied} (overwritten if existed)`);
+  } else {
+    console.warn(`Warning: Base spec templates not found at ${baseSourceDir}`);
+  }
+
+  if (pathExists(projectTemplateDir)) {
+    console.log(`\nCopying project spec templates to: ${projectTargetDir}`);
+    ensureDir(projectTargetDir);
+
+    let copied = 0;
+    let skipped = 0;
+
+    const templateFiles = fs.readdirSync(projectTemplateDir, { withFileTypes: true })
+      .filter(entry => entry.isFile() && entry.name.endsWith('.template.md'));
+
+    for (const templateFile of templateFiles) {
+      const sourcePath = path.join(projectTemplateDir, templateFile.name);
+      const targetFilename = templateFile.name.replace(/\.template\.md$/, '.md');
+      const targetPath = path.join(projectTargetDir, targetFilename);
+
+      if (fs.existsSync(targetPath)) {
+        skipped++;
+        continue;
+      }
+
+      copyFile(sourcePath, targetPath, false);
+      copied++;
+    }
+
+    console.log(`  Project templates copied: ${copied}`);
+    if (skipped > 0) {
+      console.log(`  Project templates skipped (existing): ${skipped}`);
+      if (force) {
+        console.log('  Note: Project spec files are not overwritten, even with --force.');
+      }
+    }
+  } else {
+    console.warn(`Warning: Project spec templates not found at ${projectTemplateDir}`);
+  }
 }
 
 /**
