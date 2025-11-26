@@ -68,7 +68,7 @@ For each task you manage, you must:
 
 4. **Execute the plan**
 
-   * Begin execution after planning unless required clarification or blocked by missing information or required approvals.
+   * Begin execution after planning unless blocked by missing information or required approvals.
    * Run the necessary commands and tests.
    * Edit code/files to implement the plan while adhering to the bound specs and constraints.
    * Validate work-in-progress against the task’s acceptance criteria and referenced specs.
@@ -227,7 +227,7 @@ Plan:
 
 ### 2.3 Execution Phase
 
-After planning, begin execution immediately unless blocked by missing information or required approvals. Execute the plan yourself:
+After planning, begin execution unless blocked by missing information or required approvals. Execute the plan yourself:
 
 1. Run the necessary commands and tests; edit code/files according to the plan.
 2. Keep bound specs in view; ensure changes comply with `.fluidspec/spec/base/conventions.md`, `.fluidspec/spec/base/constraints.md`, and any referenced project specs.
