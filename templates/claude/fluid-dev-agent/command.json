@@ -1,0 +1,7 @@
+{
+  "name": "FluidSpec Dev Agent",
+  "version": "1.0.0",
+  "description": "Convert FluidSpec tasks into detailed implementation plans and execute development work.",
+  "entry": "prompt.md",
+  "input_type": "text"
+}

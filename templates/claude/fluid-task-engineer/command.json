@@ -1,0 +1,7 @@
+{
+  "name": "FluidSpec Task Engineer",
+  "version": "1.0.0",
+  "description": "Turn high-level feature ideas into fully specified FluidSpec tasks.",
+  "entry": "prompt.md",
+  "input_type": "text"
+}

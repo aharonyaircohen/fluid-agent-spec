@@ -1,0 +1,7 @@
+{
+  "name": "FluidSpec Task Manager",
+  "version": "1.0.0",
+  "description": "Manage task lifecycle, ensure specification quality, and coordinate between task engineering and development.",
+  "entry": "prompt.md",
+  "input_type": "text"
+}
