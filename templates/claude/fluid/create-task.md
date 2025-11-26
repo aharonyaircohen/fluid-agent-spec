@@ -17,7 +17,9 @@ You do **not** execute the task. You only define it precisely.
 
 ## 0. Assumptions
 
-* There is a `task-types.md` document describing allowed task types and their meaning.
+* All reference material lives under the user's project root at `.fluidspec/spec/`.
+  * Core specs: `.fluidspec/spec/base/README.md`, `.fluidspec/spec/base/constraints.md`, `.fluidspec/spec/base/conventions.md`.
+  * Project templates/specs: `.fluidspec/spec/project/*.md` (locally owned; do not overwrite).
 * Tasks will be stored under:
 
 ```text
@@ -30,7 +32,6 @@ You do **not** execute the task. You only define it precisely.
 ```
 
 * Each task is a single YAML file inside the matching folder; the generator creates (or reuses) a dated subfolder per type. The folder name includes a zero-padded sequence plus date (`NNN-YYYYMMDD`), and the YAML filename is the task slug.
-* Project stack: Next.js (App Router, TypeScript, Tailwind tokens) in `apps/web`, Payload CMS + GraphQL in `apps/cms`, pnpm workspaces. Frontend talks to Payload over HTTP only.
 
 ---
 
@@ -80,36 +81,16 @@ You MUST keep the number of questions minimal but sufficient to define a precise
 
 After classifying the task type, you MUST select which specs are relevant.
 
-Use two categories, referencing real repo files/sections:
+Use two categories, referencing real files under `.fluidspec/spec/`:
 
-1. **Core specs** – always relevant for most work:
+1. **Core specs** – always relevant:
+   * `.fluidspec/spec/base/constraints.md`
+   * `.fluidspec/spec/base/conventions.md`
+   * `.fluidspec/spec/base/README.md` (overview/context)
 
-   * `docs/conventions.md` (coding, architecture, design tokens/Tailwind, frontend-graphql)
-   * `docs/tech-stack.md` (stack guardrails)
-   * `AGENTS.md` (global rules)
+2. **Project-specific specs** – optional, provided by the user or present in `.fluidspec/spec/project/*.md` (e.g., `.fluidspec/spec/project/task-template.md`).
 
-2. **Type-specific specs** – change according to task type:
-
-* `feature`:
-
-  * `docs/conventions.md#frontend-graphql` (when touching frontend GraphQL)
-  * `docs/features.md` (roadmap/feature context)
-  * `docs/design--system.md` (UI work must follow the design system; include when adding or changing UI)
-  
-* `bugfix`:
-
-  * `docs/conventions.md` (error handling, loading states)
-* `refactor`:
-
-  * `docs/conventions.md` (modularity, separation of concerns)
-* `infra`:
-
-  * `docs/tech-stack.md` (tooling/runtime expectations)
-* `spec`:
-
-  * `docs/conventions.md` (spec usage)
-
-You MUST output the relevant specs as a list of identifiers (filenames or logical IDs) in the task file.
+You MUST output the relevant specs as a list of identifiers/paths in the task file.
 
 If the user mentions additional specs or design docs, add them under `project_specs`.
 
@@ -149,12 +130,11 @@ inputs:
 
 aios_specs:
   core:
-    - "docs/conventions.md"
-    - "docs/tech-stack.md"
-    - "AGENTS.md"
+    - ".fluidspec/spec/base/constraints.md"
+    - ".fluidspec/spec/base/conventions.md"
+    - ".fluidspec/spec/base/README.md"
   extra:
-    - "docs/conventions.md#frontend-graphql"
-    - "docs/features.md"
+    - ".fluidspec/spec/project/task-template.md"
 
 project_specs:
   - "Optional: add user-provided links or additional specs"
@@ -216,9 +196,8 @@ Summary:
 - type: feature
 - file_path: tasks/feature/001-20251125/some-feature.yaml
 - selected specs:
-  - docs/conventions.md
-  - docs/tech-stack.md
-  - docs/conventions.md#frontend-graphql
+  - .fluidspec/spec/base/constraints.md
+  - .fluidspec/spec/base/conventions.md
 
 YAML:
 ```yaml
@@ -237,25 +216,18 @@ After producing the YAML, write it to the `file_path` you specify (create folder
 ---
 ## 6. Enforcing Conventions
 
-You MUST enforce all conventions defined in `docs/conventions.md` when generating tasks:
+You MUST enforce all conventions defined in `.fluidspec/spec/base/conventions.md` and all constraints from `.fluidspec/spec/base/constraints.md` when generating tasks:
 
-1. **Always include conventions.md in core specs**:
-   - `docs/conventions.md` MUST always appear in `aios_specs.core`
-   - This is non-negotiable for all task types
+1. **Always include the core specs** in `aios_specs.core`:
+   - `.fluidspec/spec/base/constraints.md`
+   - `.fluidspec/spec/base/conventions.md`
+   - `.fluidspec/spec/base/README.md` (overview/context)
 
-2. **Map task requirements to convention sections**:
-   - For frontend tasks: explicitly reference design tokens, Tailwind usage, accessibility
-   - For GraphQL tasks: reference `docs/conventions.md#frontend-graphql`
-   - For component tasks: reference component structure and naming conventions
+2. **Map task requirements to convention sections** where applicable (naming, testing, documentation, safety).
 
-3. **Add convention-specific constraints**:
-   - If the task involves UI: add "Must follow Tailwind design tokens from conventions.md"
-   - If the task involves GraphQL: add "Must follow GraphQL patterns from conventions.md#frontend-graphql"
-   - If the task involves accessibility: add "Must meet accessibility standards from conventions.md"
+3. **Add convention-derived constraints** in the YAML when relevant (e.g., follow established coding standards, respect listed non-negotiables).
 
-4. **Validate against conventions**:
-   - Before finalizing the YAML, mentally check if the task constraints and acceptance criteria align with conventions.md
-   - Flag any potential conflicts between user requirements and established conventions
+4. **Validate against conventions and constraints** before finalizing the YAML; flag any conflicts between user asks and the core specs.
 
 ---
 

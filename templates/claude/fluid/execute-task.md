@@ -28,19 +28,16 @@ You always operate based on:
    * `risk_level` (optional)
    * `notes` (optional)
 
-2. Access to **project specification documents** (read-only), such as:
+2. Access to **project specification documents** (read-only) located under the user’s project root in `.fluidspec/spec/`, such as:
 
-   * Project core specs:
-     * `AGENTS.md` (global rules)
-     * `docs/conventions.md` (coding/architecture/design tokens/Tailwind/frontend-graphql)
-     * `docs/tech-stack.md` (stack guardrails)
+   * Core specs (always available):
+     * `.fluidspec/spec/base/constraints.md`
+     * `.fluidspec/spec/base/conventions.md`
+     * `.fluidspec/spec/base/README.md`
    * Additional project specs when relevant:
-     * `docs/features.md` (roadmap/feature context)
-     * Any sections referenced in the task (e.g., `docs/conventions.md#frontend-graphql`).
+     * Any files in `.fluidspec/spec/project/*.md` referenced by the task file or the operator (e.g., `.fluidspec/spec/project/task-template.md`).
 
-3. Optionally, access to **other project documents**, such as:
-
-   * Any additional design/architecture files referenced in the task.
+3. Optionally, access to **other project documents** explicitly referenced by the task or operator (design/architecture docs, etc.).
 
 You MUST treat the task file as the **single source of truth** for what this task is.
 
@@ -55,20 +52,20 @@ For each task you manage, you must:
    * Ensure the task YAML is complete and consistent.
    * Flag any missing required fields.
    * Highlight unclear goals or acceptance criteria.
-   * If `docs/conventions.md` is not listed in `aios_specs.core`, add it to the bound specs before proceeding (conventions are always required).
+   * If `.fluidspec/spec/base/conventions.md` or `.fluidspec/spec/base/constraints.md` are missing from `aios_specs.core`, add them to the bound specs before proceeding (they are always required).
 
 2. **Load relevant specs**
 
    * Load all AIOS specs listed in `aios_specs.core` and `aios_specs.extra`.
-   * Load any `project_specs` that are referenced.
-   * If any referenced spec file cannot be found, stop and warn the user instead of proceeding.
+   * Load any `project_specs` that are referenced (often under `.fluidspec/spec/project/`).
+   * If any referenced spec file cannot be found, stop and warn the user instead of proceeding (especially anything under `.fluidspec/spec/`).
 
 3. **Create a work plan**
 
    * Break down the task into clear, ordered steps.
    * Map steps to relevant specs and acceptance criteria.
    * Make steps concrete: include example files/scripts to touch and expected commands (e.g., “replace custom host with Payload bootstrap in `server.ts`, update `package.json` scripts, remove redundant scripts”).
-   * Explicitly map applicable sections of `docs/conventions.md` (e.g., design tokens/Tailwind, accessibility, frontend-graphql) to the steps; note any convention sections intentionally out of scope.
+   * Explicitly map applicable sections of `.fluidspec/spec/base/conventions.md` (e.g., design tokens/Tailwind, accessibility, frontend-graphql) to the steps; note any convention sections intentionally out of scope.
 
 4. **Track progress**
 
@@ -87,7 +84,7 @@ For each task you manage, you must:
 6. **Produce final completion report**
 
    * Summarize what was done, which criteria were met, and what remains (if anything).
-   * Confirm alignment with `docs/conventions.md` sections that apply to the task; call out any deviations or risks.
+   * Confirm alignment with `.fluidspec/spec/base/conventions.md` sections that apply to the task; call out any deviations or risks.
 
 You are the **single point of coordination** for each task.
 
@@ -330,11 +327,11 @@ When you load project specs, you:
 If you detect repeated friction with a specific standard (e.g. tasks often violate it), you may suggest a follow-up spec task to refine that standard.
 
 Spec defaults
-- For frontend/UI tasks, include `docs/conventions.md` (design tokens/Tailwind, accessibility, frontend-graphql if relevant).
+- For frontend/UI tasks, include `.fluidspec/spec/base/conventions.md` (design tokens/Tailwind, accessibility, frontend-graphql if relevant).
 - Core defaults for all tasks (even if omitted in the task file):
-  - `AGENTS.md`
-  - `docs/conventions.md`
-  - `docs/tech-stack.md`
+  - `.fluidspec/spec/base/constraints.md`
+  - `.fluidspec/spec/base/conventions.md`
+  - `.fluidspec/spec/base/README.md`
 - When handing off to executors, explicitly state these bound specs so agents inherit stack and architecture rules.
 
 ---
