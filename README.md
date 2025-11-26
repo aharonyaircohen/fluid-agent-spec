@@ -213,6 +213,23 @@ pnpm build
 pnpm prepare
 ```
 
+### Access to Fluid Spec Files
+
+```bash
+fluidspec claude:init 
+```
+copies all internal Fluid Spec definition files (schemas, conventions, agent specs, and more) into the host project under:
+
+```bash
+.fluidspec/spec/
+```
+
+These files can be referenced directly inside any Claude command, for example:
+
+Use the task schema located at: .fluidspec/spec/task-schema.md
+
+Place this section after the “Installation and Usage” chapter in your README.md, before the “Quality, Testing, and Acceptance Criteria” section.
+
 ### Testing Locally
 
 To test the package locally before pushing:

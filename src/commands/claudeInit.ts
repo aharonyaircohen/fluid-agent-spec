@@ -120,6 +120,39 @@ export function claudeInit(options: ClaudeInitOptions): void {
     console.log(`  - /${cmd}`);
   });
 
+  // Copy FluidSpec markdown files to .fluidspec directory
+  const specTemplatesDir = path.join(packageRoot, 'templates', 'spec');
+  const fluidspecTargetDir = path.join(projectRoot, '.fluidspec');
+
+  if (pathExists(specTemplatesDir)) {
+    console.log(`\nCopying FluidSpec documentation to: ${fluidspecTargetDir}`);
+    ensureDir(fluidspecTargetDir);
+
+    // Get all .md files from templates/spec
+    const specFiles = fs.readdirSync(specTemplatesDir)
+      .filter(file => file.endsWith('.md'));
+
+    let specCopied = 0;
+    let specSkipped = 0;
+
+    for (const file of specFiles) {
+      const sourcePath = path.join(specTemplatesDir, file);
+      const targetPath = path.join(fluidspecTargetDir, file);
+
+      if (force || !fs.existsSync(targetPath)) {
+        fs.copyFileSync(sourcePath, targetPath);
+        specCopied++;
+      } else {
+        specSkipped++;
+      }
+    }
+
+    console.log(`  Copied: ${specCopied} spec file(s)`);
+    if (specSkipped > 0) {
+      console.log(`  Skipped: ${specSkipped} spec file(s) (already exist)`);
+    }
+  }
+
   console.log('\nYou can now use these commands in Claude!');
 }
 

@@ -82,7 +82,20 @@ test('Template directories exist', () => {
   }
 });
 
-// Test 5: CLI help command works
+// Test 5: Spec templates exist
+test('Spec templates exist', () => {
+  const specTemplatesDir = path.join(rootDir, 'templates', 'spec');
+  if (!fs.existsSync(specTemplatesDir)) {
+    throw new Error('templates/spec directory not found');
+  }
+
+  const specFiles = fs.readdirSync(specTemplatesDir).filter(f => f.endsWith('.md'));
+  if (specFiles.length === 0) {
+    throw new Error('No .md files found in templates/spec');
+  }
+});
+
+// Test 6: CLI help command works
 test('CLI help command works', () => {
   try {
     execSync(`node "${cliPath}" help`, { stdio: 'pipe' });
@@ -91,7 +104,7 @@ test('CLI help command works', () => {
   }
 });
 
-// Test 6: CLI list command works
+// Test 7: CLI list command works
 test('CLI list command works', () => {
   try {
     const output = execSync(`node "${cliPath}" list`, { encoding: 'utf8' });
@@ -103,7 +116,7 @@ test('CLI list command works', () => {
   }
 });
 
-// Test 7: CLI version command works
+// Test 8: CLI version command works
 test('CLI version command works', () => {
   try {
     const output = execSync(`node "${cliPath}" version`, { encoding: 'utf8' });
@@ -115,7 +128,7 @@ test('CLI version command works', () => {
   }
 });
 
-// Test 8: Create test project and run claude:init
+// Test 9: Create test project and run claude:init
 test('CLI claude:init creates command structure', () => {
   const testDir = path.join(rootDir, 'tmp-test-project');
 
@@ -149,6 +162,34 @@ test('CLI claude:init creates command structure', () => {
       if (!fs.existsSync(commandJson) || !fs.existsSync(promptMd)) {
         throw new Error(`Template ${template} is incomplete`);
       }
+    }
+
+    // Verify multi-command templates were split correctly
+    const multiCommands = ['fluid-make-task', 'fluid-run-task'];
+    for (const cmd of multiCommands) {
+      const cmdDir = path.join(commandsDir, cmd);
+      if (!fs.existsSync(cmdDir)) {
+        throw new Error(`Multi-command ${cmd} was not created`);
+      }
+
+      const commandJson = path.join(cmdDir, 'command.json');
+      const promptMd = path.join(cmdDir, 'prompt.md');
+
+      if (!fs.existsSync(commandJson) || !fs.existsSync(promptMd)) {
+        throw new Error(`Multi-command ${cmd} is incomplete`);
+      }
+    }
+
+    // Verify .fluidspec directory was created
+    const fluidspecDir = path.join(testDir, '.fluidspec');
+    if (!fs.existsSync(fluidspecDir)) {
+      throw new Error('.fluidspec directory was not created');
+    }
+
+    // Verify spec files were copied
+    const specFiles = fs.readdirSync(fluidspecDir).filter(f => f.endsWith('.md'));
+    if (specFiles.length === 0) {
+      throw new Error('No spec files were copied to .fluidspec');
     }
 
     // Cleanup
