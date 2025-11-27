@@ -121,6 +121,11 @@ test('Spec templates exist', () => {
   if (projectTemplates.length === 0) {
     throw new Error('No .template.md files found in templates/spec/project');
   }
+
+  const projectMdFiles = fs.readdirSync(specProjectDir).filter(f => f.endsWith('.md') && !f.endsWith('.template.md'));
+  if (projectMdFiles.length === 0) {
+    throw new Error('No .md files found in templates/spec/project');
+  }
 });
 
 // Test 6: CLI help command works
@@ -255,6 +260,9 @@ test('CLI claude:init creates command structure', () => {
     }
     if (!projectFiles.includes('task-template.md')) {
       throw new Error('Project templates were not renamed to .md files');
+    }
+    if (!projectFiles.includes('design--system.md') || !projectFiles.includes('tech-stack.md')) {
+      throw new Error('Project spec .md files were not copied to .fluidspec/spec/project');
     }
 
     // Cleanup

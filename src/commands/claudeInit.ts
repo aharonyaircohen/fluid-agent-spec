@@ -166,11 +166,13 @@ export function initSpecFiles(
     let skipped = 0;
 
     const templateFiles = fs.readdirSync(projectTemplateDir, { withFileTypes: true })
-      .filter(entry => entry.isFile() && entry.name.endsWith('.template.md'));
+      .filter(entry => entry.isFile() && (entry.name.endsWith('.template.md') || entry.name.endsWith('.md')));
 
     for (const templateFile of templateFiles) {
       const sourcePath = path.join(projectTemplateDir, templateFile.name);
-      const targetFilename = templateFile.name.replace(/\.template\.md$/, '.md');
+      const targetFilename = templateFile.name.endsWith('.template.md')
+        ? templateFile.name.replace(/\.template\.md$/, '.md')
+        : templateFile.name;
       const targetPath = path.join(projectTargetDir, targetFilename);
 
       if (fs.existsSync(targetPath)) {
