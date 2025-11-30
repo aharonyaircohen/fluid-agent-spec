@@ -17,6 +17,14 @@
       "input_type": "text"
     },
     {
+      "name": "Fluid Implement",
+      "id": "implement",
+      "version": "1.0.0",
+      "description": "Create and execute a task in one command (combines create-task + execute-task).",
+      "entry": "implement.md",
+      "input_type": "text"
+    },
+    {
       "name": "Fluid Create Branch",
       "id": "create-branch",
       "version": "1.0.0",
