@@ -1,77 +1,30 @@
----
-
-id: <document-id>
-type: agent-spec            # agent-spec | task-spec | arch-doc | convention | schema
-status: draft               # active | draft | deprecated
-version: 1.0.0
-owner: platform/aios
-lastUpdated: YYYY-MM-DD
-related: []                 # list of document ids
---------------------------------------------------
-
-# <Document Title>
-
-## Imports
-
-* [`other-spec`](../specs/other-spec.md)
-
-> REF: type=agent-spec id=other-spec path=../specs/other-spec.md
-
-## Exports
-
-* Defines <Contract>
-* Provides <Input/Output structures>
-
-## Purpose and Goals
-
-1–2 short sentences describing the agent’s purpose and required outcome.
-
-## Responsibilities
-
-* Responsibility A
-* Responsibility B
-* Not responsible for X, Y
-
-## Inputs and Configuration
-
-```ts
-interface Config {
-  enabled: boolean;
-  rootDir: string;
-}
-```
-
-## Outputs and Contracts
-
-```ts
-interface Output {
-  summary: string;
-}
-```
-
-## Internal Architecture
-
-* Module A
-* Module B
-* Execution Flow: Step1 → Step2 → Step3
-
-## Failure Modes
-
-* Invalid config → fail
-* Missing dependency → fail
-* Unexpected error → fail gracefully
-
-## Integration Points
-
-* Consumed by: [`task-manager-spec`](../specs/task-manager-spec.md)
-
-## Testing and Validation
-
-* Unit tests for Module A
-* Integration tests for Module B
-* Schema validation
-
-## Open Questions / Future Work
-
-* Future extension A
-* Optimization opportunity B
+task_id: test-task-001
+title: "Authentication landing"
+type: feature
+status: active
+summary: "Implement a secure login surface for the application."
+goal: "Allow users to authenticate with username and password."
+background: "This page sits in front of the existing auth service."
+aios_specs:
+  core:
+    - "src/auth/login.ts"
+    - "config/auth.json"
+    - "src/database/connection.ts"
+  extra:
+    - "docs/login.md"
+constraints:
+  - "Use existing design tokens"
+  - "Validate input on the client and server"
+acceptance_criteria:
+  - "Login form renders username and password inputs"
+  - "Submitting valid credentials returns JWT tokens"
+expected_outputs:
+  - "index.html"
+  - "session token"
+notes: "No additional assets beyond static HTML are required."
+owner: platform/test
+version: "1.0.0"
+git_integration:
+  enabled: true
+  branch: dev
+  commit_message_format: "feature(task-<id>): <short description>"
