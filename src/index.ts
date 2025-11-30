@@ -39,6 +39,9 @@ export interface InitClaudeCommandsOptions {
   force?: boolean;
 }
 
+/** General initialization options for all providers */
+export interface InitOptions extends InitClaudeCommandsOptions {}
+
 /**
  * Lists all available Claude command templates
  * Scans the templates/claude directory and returns structured information
@@ -99,6 +102,32 @@ export function initClaudeCommands(options: InitClaudeCommandsOptions = {}): voi
   const force = options.force || false;
 
   claudeInitCommand({ projectRoot, force });
+}
+
+/** Internal provider initialization descriptor */
+type ProviderInitializer = {
+  id: string;
+  init: (options: InitOptions) => void;
+};
+
+const providerInitializers: ProviderInitializer[] = [
+  {
+    id: 'claude',
+    init: initClaudeCommands,
+  },
+];
+
+/** Initialize all supported providers */
+export function init(options: InitOptions = {}): void {
+  const resolvedOptions: InitOptions = {
+    projectRoot: options.projectRoot || process.cwd(),
+    force: Boolean(options.force),
+  };
+
+  for (const provider of providerInitializers) {
+    console.log(`\nInitializing ${provider.id} provider...`);
+    provider.init(resolvedOptions);
+  }
 }
 
 // Re-export utilities for advanced use cases

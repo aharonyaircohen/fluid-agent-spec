@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { initClaudeCommands, listClaudeCommandTemplates } from './index';
+import { init, initClaudeCommands, listClaudeCommandTemplates } from './index';
 
 /**
  * Parse command line arguments
@@ -57,13 +57,14 @@ USAGE:
   fluidspec <command> [options]
 
 COMMANDS:
+  init              Initialize all available providers in current project
   claude:init       Initialize Claude commands in current project
   list              List available command templates
   help              Show this help message
   version           Show version information
 
 OPTIONS:
-  --force           Overwrite existing files (for claude:init)
+  --force           Overwrite existing files (for init, claude:init)
   --help, -h        Show help message
 
 EXAMPLES:
@@ -139,6 +140,12 @@ function main(): void {
 
   try {
     switch (fullCommand) {
+      case 'init':
+        init({
+          force: Boolean(flags.force),
+        });
+        break;
+
       case 'claude:init':
         initClaudeCommands({
           projectRoot: process.cwd(),
