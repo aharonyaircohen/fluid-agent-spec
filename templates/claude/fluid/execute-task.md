@@ -13,10 +13,10 @@ version: "2.0.0"
 <!-- AI Agent Quick Reference -->
 ## TL;DR
 - **Role**: Execute YAML-defined tasks with lifecycle management
-- **Key workflow**: Intake → Plan → **Plan Approval** → Execute → Operator Approval → Git Push → Complete
+- **Key workflow**: Intake → Plan → **Plan Approval** → Create Branch → Execute → Operator Approval → Commit → PR → Complete
 - **Required**: Task YAML file, spec compliance, plan approval before execution, operator approval before completion
-- **Output**: Progress reports, completion reports, convention compliance checks
-- **Git**: Auto-commit/push to `dev` after approval (if `git_integration.enabled`)
+- **Output**: Progress reports, completion reports, convention compliance checks, pull request
+- **Git**: Feature branch → Conventional commit → PR to `dev` (automated after approvals)
 
 ---
 
@@ -118,7 +118,7 @@ When an agent completes, show completion status:
 4. **Plan approval** - Present plan to operator, wait for `approve`/`request_changes` decision (MANDATORY)
 5. **Execute plan** - Run commands, edit code, track progress, validate against specs
 6. **Operator approval** - Present summary, wait for `approve`/`request_changes` decision
-7. **Git integration** - Stage, commit, push to `dev` after approval (if enabled)
+7. **Git workflow** - Create feature branch after plan approval, commit and create PR after operator approval
 8. **Completion report** - Summarize achievements, criteria met, convention compliance
 
 ---
@@ -143,9 +143,204 @@ When an agent completes, show completion status:
    - Q1: "Does this task meet the requirements and can it be marked as completed? (answer: `approve` or `request_changes`)"
    - Q2: "If you requested changes, describe what is missing, incorrect, or needs to be improved. Be as concrete as possible."
 4. **Handle response:**
-   - `approve` → Git push (if enabled) → `status = "completed"`
+   - `approve` → Execute commit and PR creation (see Section 2.1) → `status = "completed"`
    - `request_changes` → Increment `iteration`, store feedback, set `status = "in_progress"`, re-run
    - Cancel → `status = "rejected"`
+
+### 2.1 Commit and Pull Request Creation (Automated - After Operator Approval)
+
+**When implementation is approved, automatically commit changes and create PR:**
+
+#### Stage 1: Commit Message Generation
+
+**Extract data from:**
+1. **Task YAML:**
+   - `type` field → conventional commit type
+   - `task_id` field → scope identifier
+   - `title` field → commit description
+
+2. **Completion Report (from Section 5.4):**
+   - Achievements → what was done
+   - Files changed → detailed changes
+
+**Commit message format:**
+```
+<type>(<scope>): <description>
+
+<body>
+
+Closes: <task_id>
+```
+
+**Generation rules:**
+1. **Header (max 50 chars):**
+   - Type: Use type mapping from task YAML (feature→feat, bugfix→fix, etc.)
+   - Scope: `task-<task_id>` (e.g., `task-T-2025-001`)
+   - Description: Imperative mood summary from title (truncate to fit 50 char limit)
+
+2. **Body:**
+   - Line 1: Brief summary of what was implemented (from completion report achievements)
+   - Line 2: Blank
+   - Lines 3+: List of key changes/files modified (from completion report)
+   - Keep concise (5-10 lines max)
+
+3. **Footer:**
+   - `Closes: <task_id>`
+
+**Example:**
+```
+feat(task-T-2025-001): Add OAuth authentication
+
+Implemented OAuth 2.0 flow with Google and GitHub providers.
+Added token management and session handling.
+
+Key changes:
+- Created OAuth configuration module
+- Implemented login components
+- Added backend callback handlers
+
+Closes: T-2025-001
+```
+
+#### Stage 2: Execute Commit
+
+**Actions:**
+1. **Stage all changes:** `git add -A`
+2. **Verify changes staged:** `git status --short`
+   - If no changes: Skip commit, proceed to PR creation with note
+3. **Execute commit:** `git commit -m "<GENERATED_COMMIT_MESSAGE>"`
+   - Use multi-line commit message (header + body + footer)
+   - Ensure proper escaping for shell execution
+4. **Confirm:** Log commit hash to operator
+
+**Error handling:**
+- If staging fails: Abort, inform operator, remain in `awaiting_approval`
+- If commit fails: Abort, inform operator with git error, remain in `awaiting_approval`
+
+#### Stage 3: PR Metadata Generation
+
+**Extract data from:**
+1. **Task YAML:**
+   - `title` → PR title
+   - `goal` → PR overview
+   - `acceptance_criteria` → verification checklist
+   - `type` → PR labels
+   - `task_id` → reference
+
+2. **Completion Report:**
+   - Files changed → detailed changes section
+   - Convention compliance → quality notes
+   - Test results → verification details
+
+**PR title format:**
+```
+<type>: <task title>
+```
+
+**PR body format:**
+```markdown
+## Overview
+<goal from task YAML>
+
+## Changes
+<achievements from completion report>
+
+### Files Modified
+- path/to/file.ts - description
+...
+
+## Verification
+
+### Acceptance Criteria
+- [x] Criterion 1
+- [x] Criterion 2
+...
+
+### Convention Compliance
+- [x] Convention followed
+...
+
+## Task Reference
+Closes: <task_id>
+```
+
+**Example:**
+```markdown
+Title: feat: Add user authentication with OAuth
+
+Body:
+## Overview
+Users can authenticate using OAuth providers (Google, GitHub), with secure
+token storage and session handling.
+
+## Changes
+Implemented OAuth 2.0 authentication flow allowing users to log in with Google
+and GitHub providers. Includes token management and session handling.
+
+### Files Modified
+- src/auth/oauth-config.ts - OAuth provider configuration
+- src/components/LoginButton.tsx - OAuth login UI component
+- src/api/auth/oauth-callback.ts - Backend callback handler
+- src/services/token-manager.ts - Token refresh and storage logic
+
+## Verification
+
+### Acceptance Criteria
+- [x] Users can log in with Google OAuth 2.0
+- [x] Users can log in with GitHub OAuth 2.0
+- [x] Tokens are refreshed automatically before expiration
+
+### Convention Compliance
+- [x] TypeScript strict mode enabled
+- [x] Design tokens followed for UI components
+
+## Task Reference
+Closes: T-2025-001
+```
+
+#### Stage 4: Push and Create PR
+
+**Actions:**
+1. **Push branch:** `git push -u origin <current_branch_name>`
+   - If fails: Abort, inform operator with error
+2. **Create PR using gh CLI:**
+   ```bash
+   gh pr create \
+     --title "<GENERATED_PR_TITLE>" \
+     --body "<GENERATED_PR_BODY>" \
+     --base dev \
+     --head <current_branch_name>
+   ```
+3. **Capture PR URL:** Extract from gh command output
+4. **Confirm to operator:** Display PR URL and summary
+
+**Error handling:**
+- If push fails (e.g., remote conflicts): Inform operator with specific error, suggest manual resolution
+- If PR creation fails: Inform operator, provide manual PR creation instructions with generated content
+- If gh CLI not installed: Inform operator, provide manual instructions
+- On success: Display PR URL, mark task as `completed`
+
+#### Stage 5: Final Confirmation
+
+**Output to operator:**
+```
+✅ Implementation approved and changes committed
+
+Commit: <commit_hash> - <commit_subject>
+Branch: <current_branch_name> pushed to origin
+Pull Request: <PR_URL>
+
+PR Title: <GENERATED_PR_TITLE>
+Target Branch: dev
+
+Task T-<task_id> marked as completed.
+```
+
+**Update runtime state:**
+- Store `commit_hash: <sha>`
+- Store `pr_url: <url>`
+- Set `git_workflow_stage: pr_created`
+- Set `status: completed`
 
 **Never mark `completed` without explicit operator `approve`.**
 
@@ -157,7 +352,7 @@ When an agent completes, show completion status:
 
 **Plan approval workflow:**
 
-1. **Present plan** - After creating the work plan (section 4.2), set `status = "awaiting_plan_approval"` and present:
+1. **Present plan** - After creating the work plan (section 5.2), set `status = "awaiting_plan_approval"` and present:
    - Task ID and title
    - Proposed 3–7 concrete steps
    - Mapping to acceptance criteria
@@ -169,9 +364,57 @@ When an agent completes, show completion status:
    - Q2: "If you requested changes, describe what needs to be adjusted in the plan. Be as concrete as possible."
 
 3. **Handle response:**
-   - `approve` → Set `status = "in_progress"`, proceed to execution (section 4.3)
+   - `approve` → Execute branch creation (see Section 3.1), set `status = "in_progress"`, proceed to execution (section 5.3)
    - `request_changes` → Store feedback in `plan_feedback`, revise plan, re-request approval
    - Cancel → `status = "rejected"`
+
+### 3.1 Branch Creation (Automated - After Plan Approval)
+
+**When plan is approved, automatically create feature branch:**
+
+**Pre-flight checks:**
+1. **Switch to dev:** `git checkout dev`
+   - If fails: Abort and inform operator
+2. **Verify clean working directory:** `git status --porcelain`
+   - If dirty: Abort and inform operator: "Working directory is dirty. Please commit or stash changes before creating a new branch."
+3. **Fetch and pull latest:**
+   - `git fetch --all --prune`
+   - `git pull origin dev`
+   - If fails: Abort and inform operator
+
+**Branch name generation:**
+1. **Extract from task YAML:**
+   - `type` field (e.g., "feature", "bugfix", "refactor")
+   - `task_id` field (e.g., "T-2025-001")
+   - `title` field (e.g., "Add user authentication with OAuth")
+
+2. **Generate branch name:**
+   - **Format:** `<type>/task-<id>/<title-slug>`
+   - **Type mapping:**
+     - `feature` → `feat`
+     - `bugfix` → `fix`
+     - `refactor` → `refactor`
+     - `infra` → `chore`
+     - `spec` → `docs`
+   - **Title slugification:** Convert title to lowercase with hyphens
+     - Remove special characters
+     - Replace spaces with hyphens
+     - Truncate to 50 characters max
+   - **Example:** `feat/task-T-2025-001/add-user-authentication-with-oauth`
+
+3. **Create and switch:**
+   - `git checkout -b <generated-branch-name>`
+   - Confirm to operator: "Created and switched to branch: `<generated-branch-name>`"
+
+4. **Update runtime state:**
+   - Store `current_branch: <generated-branch-name>` in task execution context
+   - Set `git_workflow_stage: branch_created`
+
+**Error handling:**
+- If pre-flight checks fail: Abort execution, inform operator with specific error, remain in `awaiting_plan_approval` status
+- If branch creation fails: Abort execution, inform operator, remain in `awaiting_plan_approval` status
+- If branch already exists: Append timestamp suffix, retry once
+- On success: Proceed to execution phase (Section 5.3)
 
 4. **Iterate if needed** - If plan is rejected, incorporate feedback and present revised plan
 
@@ -181,24 +424,80 @@ When an agent completes, show completion status:
 - `plan_feedback`: Latest operator comments on the plan
 - `plan_iteration`: Integer counter for plan revisions (starts at `1`)
 
+**Runtime state fields for Git workflow:**
+- `current_branch`: Name of feature branch created (populated in Section 3.1)
+- `commit_hash`: SHA of commit created (populated in Section 2.1)
+- `pr_url`: URL of created pull request (populated in Section 2.1)
+- `git_workflow_stage`: Current git stage (branch_created|committed|pr_created|completed)
+
 ---
 
-## 4. Git Integration (Post-Approval)
+## 4. Git Workflow (Feature Branch + Pull Request)
 
-**When `git_integration.enabled = true`:**
+**This workflow implements a feature-branch-based pull request process:**
 
-1. **Prepare** - `git fetch && git pull origin dev`
-2. **Stage** - `git add .`
-3. **Commit** - `git commit -m "<type>(task-<id>): <short description>"`
-4. **Push** - `git push origin dev`
-   - On conflict: pull, reapply, retry; escalate if unresolvable
-5. **Complete** - Mark `completed`, log commit hash/files/timestamp
+### Branch Creation (Section 3.1)
+- Triggered automatically after plan approval
+- Creates feature branch: `<type>/task-<id>/<title-slug>`
+- Ensures clean state and latest dev branch code
 
-**Skip commit/push when:**
-- Operator requested changes
-- No file changes exist
-- Repository conflicts/dirty state
-- Execution failed
+### Commit and PR Creation (Section 2.1)
+- Triggered automatically after operator approves implementation
+- Generates conventional commit message from task YAML and completion report
+- Creates pull request with detailed metadata
+- Targets `dev` branch for merge
+
+### Workflow Summary
+
+```
+Plan Approval → Create Branch (Section 3.1) → Execute Implementation →
+Operator Approval → Commit Changes (Section 2.1) → Push Branch →
+Create PR → Status = Completed
+```
+
+**The following happens automatically:**
+1. **After plan approval:**
+   - Pre-flight checks (switch to dev, clean working dir, fetch/pull)
+   - Branch creation with conventional naming
+   - Checkout to feature branch
+
+2. **After operator approval:**
+   - Stage all changes (`git add -A`)
+   - Generate and execute conventional commit
+   - Push feature branch to remote
+   - Create pull request with auto-generated metadata
+   - Mark task as completed
+
+**Branch naming convention:**
+- Format: `<type>/task-<id>/<title-slug>`
+- Examples:
+  - `feat/task-T-2025-001/add-oauth-authentication`
+  - `fix/task-T-2025-042/fix-png-upload-error`
+  - `refactor/task-T-2025-015/restructure-auth-module`
+
+**Commit message convention:**
+- Format: `<type>(<scope>): <description>` (Conventional Commits)
+- Scope: `task-<task_id>`
+- Body: Summary from completion report
+- Footer: `Closes: <task_id>`
+
+**Pull request convention:**
+- Title: `<type>: <task title>`
+- Body: Overview + Changes + Verification (auto-generated)
+- Target: `dev` branch
+- Labels: Auto-applied based on task type
+
+**Error handling:**
+- Branch creation fails → Abort before execution, inform operator
+- Commit fails → Remain in `awaiting_approval`, inform operator
+- Push fails → Inform operator, provide manual instructions
+- PR creation fails → Inform operator with generated PR content for manual creation
+
+**Skip git operations when:**
+- Plan approval rejected (no branch created)
+- Operator approval rejected (no commit/PR created)
+- No file changes exist (skip commit, still create PR if branch exists)
+- Git operations fail (escalate to operator)
 
 ---
 
@@ -475,7 +774,8 @@ Risks/Notes: ...
 - Never invent goals/criteria – use task file or explicit user additions
 - **Never begin execution without plan approval** (see Section 3)
 - Never mark `completed` without operator `approve`
-- For `git_integration.enabled`, only complete after successful push
+- Only mark `completed` after successful commit and PR creation (or after providing manual PR instructions)
+- Feature branch persists across iterations (reuse same branch for change requests)
 - Push back on vague language
 - User is final decision-maker; state your assessment explicitly
 - Enforce convention compliance at every phase
